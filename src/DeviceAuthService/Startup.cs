@@ -5,6 +5,7 @@ using Microsoft.Azure.WebJobs.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
+using System.IO;
 
 [assembly: WebJobsStartup(typeof(Startup))]
 
@@ -12,6 +13,16 @@ namespace Ltwlf.Azure.B2C
 {
     public class Startup : FunctionsStartup
     {
+        public override void ConfigureAppConfiguration(IFunctionsConfigurationBuilder builder)
+        {
+            FunctionsHostBuilderContext context = builder.GetContext();
+
+            builder.ConfigurationBuilder
+                .AddJsonFile(Path.Combine(context.ApplicationRootPath, "appsettings.json"), optional: true, reloadOnChange: false)
+                .AddJsonFile(Path.Combine(context.ApplicationRootPath, $"appsettings.{context.EnvironmentName}.json"), optional: true, reloadOnChange: false)
+                .AddEnvironmentVariables();
+        }
+
         public override void Configure(IFunctionsHostBuilder builder)
         {
             var config = builder.GetContext().Configuration;
@@ -28,7 +39,7 @@ namespace Ltwlf.Azure.B2C
 
             builder.Services.Configure<HttpOptions>(options => options.RoutePrefix = string.Empty);
 
-            var redis = ConnectionMultiplexer.Connect(config.GetValue<string>("Config:Redis"));
+            var redis = ConnectionMultiplexer.Connect("localhost"/*config.GetValue<string>("Redis")*/);
 
             builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
         }

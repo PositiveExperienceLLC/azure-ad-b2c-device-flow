@@ -59,7 +59,7 @@ namespace Ltwlf.Azure.B2C
 
             var tokenResponse = await _client.PostAsync(Helpers.GetTokenEndpoint(_config),
                 new StringContent(
-                        $"grant_type=authorization_code&client_id={_config.AppId}&client_secret={_config.AppSecret}&scope={scope}&code={code}")
+                        $"grant_type=authorization_code&client_id={_config.AppId}&client_secret={_config.AppSecret}&scope={scope}&code={code}&code_verifier={authState.CodeVerifier}")
                     {Headers = {ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded")}});
 
             if (tokenResponse.IsSuccessStatusCode == false)

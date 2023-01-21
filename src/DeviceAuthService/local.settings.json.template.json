@@ -1,14 +1,28 @@
 {
     "IsEncrypted": false,
-    "Values": {
-        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-        "Config:AppId": "",
-        "Config:AppSecret": "",
-        "Config:Tenant": "myb2c",
-        "Config:RedirectUri": "http://localhost:7071/authorization_callback",
-        "Config:SignInPolicy": "B2C_1A_signup_signin",
-        "Config:VerificationUri": "http://localhost:7071",
-        "Config:Redis": "localhost"
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "Config:AppId": "6ee20164-b269-441c-83a7-ff44f27f0d6",
+    "Config:AppSecret": "",
+    "Config:Tenant": "9ec1ddf3-c7dc-4165-a3ca-a6efe7b1ce9a",
+    "Config:RedirectUri": "http://localhost:7071/authorization_callback",
+    "Config:SignInPolicy": "B2C_1A_SIGNUP_SIGNIN",
+    "Config:VerificationUri": "http://localhost:7071",
+    "Config:Redis": "127.0.0.1:6379",
+    "Redis": {
+      "Password": "",
+      "AllowAdmin": true,
+      "Ssl": true,
+      "ConnectTimeout": 6000,
+      "ConnectRetry": 2,
+      "Database": 0,
+      "Hosts": [
+        {
+          "Host": "localhost",
+          "Port": "6379"
+        }
+      ]
     }
+  }
 }

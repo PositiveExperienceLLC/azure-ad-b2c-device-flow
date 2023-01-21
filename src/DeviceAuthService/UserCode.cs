@@ -1,10 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
@@ -53,9 +56,14 @@ namespace Ltwlf.Azure.B2C
                 var appId = _config.AppId;
                 var redirectUri = HttpUtility.UrlEncode(_config.RedirectUri);
                 var scope = authState.Scope ?? "openid";
+                string codeChallenge;
+                using (var sha256 = SHA256.Create())
+                {
+                    var challengeBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(authState.CodeVerifier));
+                    codeChallenge = Base64UrlTextEncoder.Encode(challengeBytes);
+                }
 
-                var url =
-                    $"https://{_config.Tenant}.b2clogin.com/{_config.Tenant}.onmicrosoft.com/oauth2/v2.0/authorize?p={signInFlow}&client_Id={appId}&redirect_uri={redirectUri}&scope={scope}&state={authState.UserCode}&nonce=defaultNonce&response_type=code&prompt=login&response_mode=form_post";
+                var url = $"https://{_config.Tenant}.b2clogin.com/{_config.Tenant}.onmicrosoft.com/{signInFlow}/oauth2/v2.0/authorize?client_Id={appId}&redirect_uri={redirectUri}&scope={scope}&state={authState.UserCode}&nonce=defaultNonce&response_type=code&prompt=login&response_mode=form_post&code_challenge={codeChallenge}&code_challenge_method=S256";
 
                 return useAjax
                     ? (IActionResult) new ContentResult {Content = url, ContentType = "text/plain"}

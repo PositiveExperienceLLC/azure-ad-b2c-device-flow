@@ -10,6 +10,9 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using StackExchange.Redis;
 using  System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Ltwlf.Azure.B2C
 {
@@ -52,6 +55,19 @@ namespace Ltwlf.Azure.B2C
                 throw new ArgumentException("ClientId is missing!");
             }
 
+            var random = new Random();
+            int codeVerifierLength = random.Next(43, 128);
+            var bytes = new byte[codeVerifierLength];
+            var cryptoRandom = RandomNumberGenerator.Create();
+            cryptoRandom.GetBytes(bytes);
+
+            // It is recommended to use a URL-safe string as code_verifier.
+            // See section 4 of RFC 7636 for more details.
+            var codeVerifier = Convert.ToBase64String(bytes)
+                .TrimEnd('=')
+                .Replace('+', '-')
+                .Replace('/', '_');
+
             var authState = new AuthorizationState()
             {
                 DeviceCode = GenerateDeviceCode(),
@@ -59,7 +75,8 @@ namespace Ltwlf.Azure.B2C
                 UserCode = GenerateUserCode(),
                 ExpiresIn = 300,
                 VerificationUri = _config.VerificationUri,
-                Scope = req.Form?["scope"]
+                Scope = req.Form?["scope"],
+                CodeVerifier = codeVerifier
             };
 
             var response = new AuthorizationResponse()
