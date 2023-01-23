@@ -44,12 +44,12 @@ namespace Ltwlf.Azure.B2C
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "oauth/token")]
             HttpRequest req, ILogger log)
         {
-            var deviceCode = req.Form["device_code"].SingleOrDefault();
-            var grantType = req.Form["grant_type"].SingleOrDefault();
-            var clientId = req.Form["client_id"].SingleOrDefault();
+            var deviceCode = req.Query["device_code"].SingleOrDefault();
+            var grantType = req.Query["grant_type"].SingleOrDefault();
+            var clientId = req.Query["client_id"].SingleOrDefault();
 
             if (grantType == null)
-                return new BadRequestObjectResult("client_id, grant_type are mandatory");
+                return new BadRequestObjectResult("grant_type are mandatory");
 
             /*
             if (!grantType.Equals("urn:ietf:params:oauth:grant-type:device_code", StringComparison.OrdinalIgnoreCase) || !grantType.Equals("refresh_token", StringComparison.OrdinalIgnoreCase) )

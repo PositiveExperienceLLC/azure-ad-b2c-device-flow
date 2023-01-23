@@ -70,9 +70,9 @@ namespace Ltwlf.Azure.B2C
 
             var authState = new AuthorizationState()
             {
-                DeviceCode = GenerateDeviceCode(),
+                DeviceCode = CreateSecureRandomString(),
                 ClientId = clientId,
-                UserCode = GenerateUserCode(),
+                UserCode = CreateSecureRandomString(_config.UserCodeLength),
                 ExpiresIn = 300,
                 VerificationUri = _config.VerificationUri,
                 Scope = req.Form?["scope"],
@@ -93,19 +93,20 @@ namespace Ltwlf.Azure.B2C
             return new OkObjectResult(response);
         }
 
-        private static string GenerateDeviceCode()
+        public static string CreateSecureRandomString(int count = 64)
         {
-            return Guid.NewGuid().ToString();
-        }
+            var bytes = new byte[count];
+            var cryptoRandom = RandomNumberGenerator.Create();
+            cryptoRandom.GetBytes(bytes);
 
-        private string GenerateUserCode()
-        {
-            int num = 1;
-            for (var i = 0; i < _config.UserCodeLength; i++)
-            {
-                num = num * 10;
-            }
-            return new Random().Next(0, num -1).ToString($"D{_config.UserCodeLength}");
+            // It is recommended to use a URL-safe string as code_verifier.
+            // See section 4 of RFC 7636 for more details.
+            var randomString = Convert.ToBase64String(bytes)
+                .TrimEnd('=')
+                .Replace('+', '-')
+                .Replace('/', '_');
+
+            return randomString;
         }
     }
 }
