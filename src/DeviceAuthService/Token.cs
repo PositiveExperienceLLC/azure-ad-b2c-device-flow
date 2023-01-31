@@ -46,6 +46,10 @@ namespace Ltwlf.Azure.B2C
         {
             var deviceCode = req.Query["device_code"].SingleOrDefault();
             var grantType = req.Query["grant_type"].SingleOrDefault();
+            if(grantType == null)
+            {
+                grantType = req.Form["grant_type"];
+            }    
             var clientId = req.Query["client_id"].SingleOrDefault();
 
             if (grantType == null)
@@ -54,7 +58,7 @@ namespace Ltwlf.Azure.B2C
             /*
             if (!grantType.Equals("urn:ietf:params:oauth:grant-type:device_code", StringComparison.OrdinalIgnoreCase) || !grantType.Equals("refresh_token", StringComparison.OrdinalIgnoreCase) )
                 return new BadRequestObjectResult("gran_type must be \"urn:ietf:params:oauth:grant-type:device_code\"");
-*/
+            */
             if (grantType.Equals("refresh_token", StringComparison.OrdinalIgnoreCase))
             {
                 var scope = req.Form["scope"].SingleOrDefault() ?? "openid";

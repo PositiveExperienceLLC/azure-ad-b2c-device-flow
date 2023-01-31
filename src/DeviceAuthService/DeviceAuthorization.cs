@@ -13,6 +13,7 @@ using  System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
+using System.Collections.Generic;
 
 namespace Ltwlf.Azure.B2C
 {
@@ -57,23 +58,16 @@ namespace Ltwlf.Azure.B2C
 
             var random = new Random();
             int codeVerifierLength = random.Next(43, 128);
-            var bytes = new byte[codeVerifierLength];
-            var cryptoRandom = RandomNumberGenerator.Create();
-            cryptoRandom.GetBytes(bytes);
 
             // It is recommended to use a URL-safe string as code_verifier.
             // See section 4 of RFC 7636 for more details.
-            var codeVerifier = Convert.ToBase64String(bytes)
-                .TrimEnd('=')
-                .Replace('+', '-')
-                .Replace('/', '_');
-
+            var codeVerifier = GenerateRandomString(length:codeVerifierLength);
             var authState = new AuthorizationState()
             {
                 DeviceCode = CreateSecureRandomString(),
                 ClientId = clientId,
-                UserCode = CreateSecureRandomString(_config.UserCodeLength),
-                ExpiresIn = 300,
+                UserCode = GenerateRandomString(length:_config.UserCodeLength),
+                ExpiresIn = 360,
                 VerificationUri = _config.VerificationUri,
                 Scope = req.Form?["scope"],
                 CodeVerifier = codeVerifier
@@ -87,8 +81,15 @@ namespace Ltwlf.Azure.B2C
                 VerificationUri = authState.VerificationUri
             };
 
-            _muxer.GetDatabase().StringSet($"{authState.DeviceCode}:{authState.UserCode}",
-                JsonConvert.SerializeObject(authState), new TimeSpan(0, 0, authState.ExpiresIn));
+            try
+            {
+                _muxer.GetDatabase().StringSet($"{authState.DeviceCode}:{authState.UserCode}",
+                    JsonConvert.SerializeObject(authState), new TimeSpan(0, 0, authState.ExpiresIn));
+            }
+            catch(Exception ex)
+            {
+                log.LogError($"Error creating device code request {ex.Message}");
+            }
 
             return new OkObjectResult(response);
         }
@@ -107,6 +108,15 @@ namespace Ltwlf.Azure.B2C
                 .Replace('/', '_');
 
             return randomString;
+        }
+
+        public static string GenerateRandomString(int length, string charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+        {
+            var charArray = charSet.Distinct().ToArray();
+            char[] result = new char[length];
+            for (int i = 0; i < length; i++)
+                result[i] = charArray[RandomNumberGenerator.GetInt32(charArray.Length)];
+            return new string(result);
         }
     }
 }
