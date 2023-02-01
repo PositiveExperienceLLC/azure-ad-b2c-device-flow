@@ -18,6 +18,5 @@ namespace Ltwlf.Azure.B2C
         [JsonProperty("id_token")] public string IdToken { get; set; }
 
         [JsonProperty("token_type")] public string TokenType { get; set; }
-        [JsonProperty("resource")] public string Resource { get; set; }
     }
 }
