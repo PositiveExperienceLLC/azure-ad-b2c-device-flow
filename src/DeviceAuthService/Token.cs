@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyModel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
@@ -26,6 +27,7 @@ namespace Ltwlf.Azure.B2C
             [JsonProperty("expires_in")] public int ExpiresIn { get; set; }
             [JsonProperty("refresh_token")] public string RefreshToken { get; set; }
             [JsonProperty("scope")] public string Scope { get; set; }
+            [JsonProperty("resource")] public string Resource { get; set; }
         }
 
         private readonly IConnectionMultiplexer _muxer;
@@ -70,14 +72,15 @@ namespace Ltwlf.Azure.B2C
                         {Headers = {ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded")}});
                 
                 var jwt = await b2CTokenResponse.Content.ReadAsAsync<JObject>();
-                
+
                 var accessTokenResponse = new TokenResponse
                 {
                     AccessToken = jwt.Value<string>("access_token"),
                     RefreshToken = jwt.Value<string>("refresh_token"),
                     ExpiresIn = jwt.Value<int>("expires_in"),
                     TokenType = jwt.Value<string>("token_type"),
-                    Scope =  jwt.Value<string>("token_type")
+                    Scope =  jwt.Value<string>("scope"),
+                    Resource = jwt.Value<string>("resource")
                 };
                 
                 return new OkObjectResult(accessTokenResponse);
