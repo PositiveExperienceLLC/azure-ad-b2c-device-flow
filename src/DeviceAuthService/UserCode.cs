@@ -31,7 +31,7 @@ namespace Ltwlf.Azure.B2C
 
         [FunctionName("user_code_get")]
         public IActionResult Get(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "/")]
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get")]
             HttpRequest req, ILogger log, ExecutionContext context)
         {
             return _pageFactory.GetPageResult(PageFactory.PageType.UserCode);
@@ -39,7 +39,7 @@ namespace Ltwlf.Azure.B2C
 
         [FunctionName("user_code_post")]
         public async Task<IActionResult> Post(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "/")]
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
             HttpRequest req, ILogger log, ExecutionContext context)
         {
             var useAjax = req.Headers.TryGetValue("x-use-ajax", out var useAjaxHeader) &&

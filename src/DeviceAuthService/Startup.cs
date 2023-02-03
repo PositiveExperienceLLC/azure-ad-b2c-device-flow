@@ -37,7 +37,7 @@ namespace Ltwlf.Azure.B2C
 
             builder.Services.AddHttpClient();
 
-            builder.Services.Configure<HttpOptions>(options => options.RoutePrefix = string.Empty);
+            //builder.Services.Configure<HttpOptions>(options => options.RoutePrefix = string.Empty);
 
             var redis = ConnectionMultiplexer.Connect(config.GetValue<string>("Redis:Connection"));
 
