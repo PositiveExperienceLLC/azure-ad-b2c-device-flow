@@ -51,11 +51,6 @@ namespace Ltwlf.Azure.B2C
                 throw new ArgumentException("Request content type must be application/x-www-form-urlencoded");
             }
 
-            if (!req.Form.TryGetValue("clientId", out var clientId))
-            {
-                throw new ArgumentException("ClientId is missing!");
-            }
-
             var random = new Random();
             int codeVerifierLength = random.Next(43, 128);
 
@@ -65,7 +60,7 @@ namespace Ltwlf.Azure.B2C
             var authState = new AuthorizationState()
             {
                 DeviceCode = CreateSecureRandomString(),
-                ClientId = clientId,
+                ClientId =  _config.AppId,
                 UserCode = GenerateRandomString(length:_config.UserCodeLength),
                 ExpiresIn = 360,
                 VerificationUri = _config.VerificationUri,
