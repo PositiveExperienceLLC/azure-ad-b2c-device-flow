@@ -78,7 +78,7 @@ namespace Ltwlf.Azure.B2C
             _muxer.GetDatabase().StringSet($"{authState.DeviceCode}:{authState.UserCode}",
                 JsonConvert.SerializeObject(authState), TimeSpan.FromSeconds(_config.ExpiresIn));
 
-            return _pageFactory.GetPageResult(PageFactory.PageType.Success);
+            return new RedirectResult("../signinSuccess.html");
         }
     }
 }
