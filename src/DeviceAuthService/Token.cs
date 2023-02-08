@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -70,20 +71,27 @@ namespace Ltwlf.Azure.B2C
                     new StringContent(
                             $"grant_type=refresh_token&refresh_token={refreshToken}&client_id={_config.AppId}&client_secret={_config.AppSecret}&scope={scope}&")
                         {Headers = {ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded")}});
-                
-                var jwt = await b2CTokenResponse.Content.ReadAsAsync<JObject>();
 
-                var accessTokenResponse = new TokenResponse
+                if (b2CTokenResponse.IsSuccessStatusCode)
                 {
-                    AccessToken = jwt.Value<string>("access_token"),
-                    RefreshToken = jwt.Value<string>("refresh_token"),
-                    ExpiresIn = jwt.Value<int>("expires_in"),
-                    TokenType = jwt.Value<string>("token_type"),
-                    Scope =  jwt.Value<string>("scope"),
-                    Resource = jwt.Value<string>("resource")
-                };
-                
-                return new OkObjectResult(accessTokenResponse);
+                    var jwt = await b2CTokenResponse.Content.ReadAsAsync<JObject>();
+
+                    var accessTokenResponse = new TokenResponse
+                    {
+                        AccessToken = jwt.Value<string>("access_token"),
+                        RefreshToken = jwt.Value<string>("refresh_token"),
+                        ExpiresIn = jwt.Value<int>("expires_in"),
+                        TokenType = jwt.Value<string>("token_type"),
+                        Scope = jwt.Value<string>("scope"),
+                        Resource = jwt.Value<string>("resource")
+                    };
+
+                    return new OkObjectResult(accessTokenResponse);
+                }
+                else
+                {
+                    return new BadRequestErrorMessageResult(b2CTokenResponse.ReasonPhrase);
+                }
             }
             
             var pattern = $"{deviceCode}:*";
