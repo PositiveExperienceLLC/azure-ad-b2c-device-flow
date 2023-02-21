@@ -29,21 +29,22 @@ _Work in progress_...
 ## Start on device
 
 ```
-POST https://login.clir.io/oauth/device_authorization
+POST https://login.clir.io/api/oauth/device_authorization
 Accept: */*
 Content-Type: application/x-www-form-urlencoded
 Cache-Control: no-cache
 
-clientId=3a43ce17-dc74-43ef-9e2d-070716155cc1&scope=https://cliriob2c.onmicrosoft.com/6ee20164-b269-441c-83a7-ff44f27f0d62/access_as_user
+scope=https://cliriob2c.onmicrosoft.com/6ee20164-b269-441c-83a7-ff44f27f0d62/access_as_user
 ```
 
 Example Response:
 
 ```
 {
-    "device_code":"9ab010de-9fe7-4f62-96c9-e9498004211e",
-    "user_code":"211313","verification_uri":"https://login.clir.io/",
-    "expires_in":300
+    "device_code": "2co08-hzi7PoJ0ZRuOx_e57BZXurHPKZdmRimxgw1hf73PdCex-cyQ_zni2mEgHH0g2ighOPlVKk0B2KV7MHoQ",
+    "user_code": "OpYbIS",
+    "verification_uri": "https://login.clir.io",
+    "expires_in": 360
 }
 
 ```
@@ -57,12 +58,12 @@ Enter User Code and login
 ### Poll for token on device
 
 ```
-POST https://login.clir.io/oauth/token
+POST https://login.clir.io/api/oauth/token
 Accept: */*
 Content-Type: application/x-www-form-urlencoded
 Cache-Control: no-cache
 
-grant_type=urn:ietf:params:oauth:grant-type:device_code&client_Id=mydeviceId&device_code=9ab010de-9fe7-4f62-96c9-e9498004211e
+grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code=2co08-hzi7PoJ0ZRuOx_e57BZXurHPKZdmRimxgw1hf73PdCex-cyQ_zni2mEgHH0g2ighOPlVKk0B2KV7MHoQ
 ```
 
 Pending example response:
