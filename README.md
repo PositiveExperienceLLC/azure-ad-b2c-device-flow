@@ -29,12 +29,12 @@ _Work in progress_...
 ## Start on device
 
 ```
-POST https://service-device-auth-flow.azurewebsites.net/oauth/device_authorization
+POST https://login.clir.io/oauth/device_authorization
 Accept: */*
 Content-Type: application/x-www-form-urlencoded
 Cache-Control: no-cache
 
-clientId=clientId&scope=offline_access
+clientId=3a43ce17-dc74-43ef-9e2d-070716155cc1&scope=https://cliriob2c.onmicrosoft.com/6ee20164-b269-441c-83a7-ff44f27f0d62/access_as_user
 ```
 
 Example Response:
@@ -42,7 +42,7 @@ Example Response:
 ```
 {
     "device_code":"9ab010de-9fe7-4f62-96c9-e9498004211e",
-    "user_code":"211313","verification_uri":"https://service-device-auth-flow.azurewebsites.net/",
+    "user_code":"211313","verification_uri":"https://login.clir.io/",
     "expires_in":300
 }
 
@@ -50,14 +50,14 @@ Example Response:
 
 ## Navigate to website
 
-https://service-device-auth-flow.azurewebsites.net/
+https://login.clir.io/
 
 Enter User Code and login
 
 ### Poll for token on device
 
 ```
-POST https://service-device-auth-flow.azurewebsites.net/oauth/token
+POST https://login.clir.io/oauth/token
 Accept: */*
 Content-Type: application/x-www-form-urlencoded
 Cache-Control: no-cache
