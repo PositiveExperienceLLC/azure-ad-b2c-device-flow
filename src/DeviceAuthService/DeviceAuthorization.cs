@@ -105,6 +105,7 @@ namespace Ltwlf.Azure.B2C
             return randomString;
         }
 
+        // RFC 7636 4.1 code_verifier string missing characters (specifically: "-._~")
         public static string GenerateRandomString(int length, string charSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
         {
             var charArray = charSet.Distinct().ToArray();
