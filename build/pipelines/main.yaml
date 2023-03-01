@@ -1,0 +1,36 @@
+name: $(GitVersion.NuGetVersionV2)_$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - development
+      - main
+
+pr: none
+
+variables:
+  vmImage: ubuntu-latest
+  serviceCode: 'tok'
+  ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
+    environmentCode: prd
+    serviceConnection: 'Azure DevOps Pipeline Service Connection Production'
+  ${{ else }}:
+    environmentCode: dev
+    serviceConnection: 'Azure DevOps Pipeline Service Connection Development'
+
+parameters:
+  - name: ResourceGroupName
+    default: '$(serviceCode)-$(environmentCode)'
+  - name: Location
+    default: 'West US'
+  - name: OverrideEnvironmentCode
+    default: '$(environmentCode)'
+
+stages:
+  - template: ci.yml
+  - template: cd.yml
+    parameters:
+      ResourceGroupName: ${{parameters.ResourceGroupName}}
+      Location: ${{parameters.Location}}
+      EnvironmentCode: ${{parameters.OverrideEnvironmentCode}}
