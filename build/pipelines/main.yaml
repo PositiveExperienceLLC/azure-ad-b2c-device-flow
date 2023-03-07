@@ -11,7 +11,7 @@ pr: none
 
 variables:
   vmImage: ubuntu-latest
-  serviceCode: 'dcf'
+  serviceCode: 'das'
   ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
     environmentCode: prd
     serviceConnection: 'Azure DevOps Pipeline Service Connection Production'

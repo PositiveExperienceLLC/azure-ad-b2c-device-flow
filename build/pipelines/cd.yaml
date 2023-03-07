@@ -1,0 +1,68 @@
+parameters:
+- name: ResourceGroupName
+- name: Location
+- name: EnvironmentCode
+
+stages:
+- stage: Deployment
+  dependsOn: Integration
+  jobs:
+  - deployment: Deployment
+    pool:
+      vmImage: $(vmImage)
+    environment: ${{parameters.EnvironmentCode}}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            displayName: Download Build Artifacts
+            artifact: Drop
+
+          - task: AzureCLI@2
+            displayName: Provision Azure Resource Group
+            inputs:
+              azureSubscription: $(ServiceConnection)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                az group create --name ${{parameters.ResourceGroupName}} --location '${{parameters.Location}}'
+
+          - task: AzureCLI@2
+            displayName: Provision Azure Resources
+            inputs:
+              azureSubscription: $(ServiceConnection)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                $deploymentName = '$(Build.BuildNumber)'.replace(' ', '_')
+                az deployment group create -g ${{parameters.ResourceGroupName}} -n $deploymentName `
+                  --template-file '$(Pipeline.Workspace)/Drop/arm/main.bicep' `
+                  --parameters `
+                    serviceCode='$(serviceCode)' `
+                    environmentCode='${{parameters.environmentCode}}'
+
+          - task: AzureCLI@2
+            displayName: Collect ARM Outputs
+            inputs:
+              azureSubscription: $(ServiceConnection)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                $deploymentName = '$(Build.BuildNumber)'.replace(' ', '_')
+                $outputs = az deployment group show -g ${{parameters.ResourceGroupName}} -n $deploymentName --query properties.outputs | convertFrom-Json
+
+                $appHostName = $outputs.appHostName.Value
+                Write-Host "##vso[task.setvariable variable=WebAppName;]$appHostName"
+
+          - task: AzureWebApp@1
+            displayName: Deploy Service Binaries
+            inputs:
+              azureSubscription: $(ServiceConnection)
+              appType: functionApp
+              appName: $(WebAppName)
+              package: $(Pipeline.Workspace)/Drop/$(Build.BuildNumber).zip
+              deploymentMethod: runFromPackage
+              ${{ if eq(parameters.environmentCode, 'prd') }}:
+                deployToSlotOrASE: true
+                slotName: staging
