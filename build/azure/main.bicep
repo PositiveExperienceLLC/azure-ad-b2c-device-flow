@@ -50,14 +50,8 @@ var sharedResources = {
   resourceGroup: {
     name: 'shared-${environmentCode}'
   }
-  blobStorage: {
-    name: 'sitescanblob${environmentCode}'
-  }
-  eventTopic: {
-    name: 'sitescan-events-${environmentCode}'
-  }
-  cosmosAccount: {
-    name: 'sitescan-db-sql-${environmentCode}'
+  redisCache: {
+    name: 'sitescan-devicecode-${environmentCode}'
   }
 }
 
@@ -78,6 +72,12 @@ resource storage 'Microsoft.Storage/storageAccounts@2021-06-01' = {
   sku: {
     name: 'Standard_LRS'
   }
+}
+
+var redisConnectionString = '${sharedResources.redisCache.name}.redis.cache.windows.net,abortConnect=false,ssl=true,password=${redisCache.listKeys().primaryKey}'
+resource redisCache 'Microsoft.Cache/Redis@2021-06-01' existing = {
+  name: sharedResources.redisCache.name
+  scope: resourceGroup(sharedResources.resourceGroup.name)
 }
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
@@ -140,7 +140,7 @@ var settings = {
   'Config:RedirectUri': 'https://login.clir.io/api/authorization_callback'
   'Config:SignInPolicy': 'B2C_1A_SIGNUP_SIGNIN'
   'Config:VerificationUri': 'https://login.clir.io'
-  'Config:Redis:Connection': 'sitescan-devicecode-dev.redis.cache.windows.net:6380,password=vnKQcWcSOrHcW91VnC4ALH8aVNUgRupa9AzCaMJ7LlU=,ssl=True,abortConnect=False'
+  'Config:Redis:Connection': '@Microsoft.KeyVault(SecretUri=${secretRedisConnectionString.properties.secretUri})'
   WEBSITE_RUN_FROM_PACKAGE: '1'
 }
 
@@ -181,6 +181,14 @@ resource secretStorageConnectionString 'Microsoft.KeyVault/vaults/secrets@2021-0
   parent: keyVault
   properties: {
     value: storageConnectionString
+  }
+}
+
+resource secretRedisConnectionString 'Microsoft.KeyVault/vaults/secrets@2021-06-01-preview' = {
+  name: 'SharedRedisConnectionString'
+  parent: keyVault
+  properties: {
+    value: redisConnectionString
   }
 }
 
