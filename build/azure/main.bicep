@@ -51,7 +51,7 @@ var sharedResources = {
     name: 'shared-${environmentCode}'
   }
   redisCache: {
-    name: 'sitescan-devicecode-${environmentCode}'
+    name: 'sitescan-cache-${environmentCode}'
   }
 }
 
