@@ -21,17 +21,6 @@ stages:
             inputs:
               version: '3.x'
 
-          - task: gitversion/setup@0
-            displayName: Install GitTools
-            inputs:
-              versionSpec: '5.x'
-
-          - task: gitversion/execute@0
-            displayName: Calculate Semantic Version
-            inputs:
-              useConfigFile: true
-              configFilePath: 'gitversion.yml' # case-sensitive
-
           - task: NuGetAuthenticate@0
             displayName: Authenticate to Private Feed
 
@@ -69,14 +58,6 @@ stages:
               SourceFolder: build/azure
               TargetFolder: $(Build.ArtifactStagingDirectory)/arm
               preserveTimestamp: true
-
-          - ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
-              - pwsh: |
-                  git config --global user.email "devops@clir.io"
-                  git config --global user.name "CI/CD Pipeline"
-                  git tag -a "$(GitVersion.SemVer)" -m "Tagged version $(GitVersion.SemVer)"
-                  git push origin "$(GitVersion.SemVer)"
-                displayName: Tag Repository
 
           - publish: $(Build.ArtifactStagingDirectory)
             displayName: Publish Build Artifacts
