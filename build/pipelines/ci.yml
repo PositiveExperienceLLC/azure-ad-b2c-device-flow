@@ -1,0 +1,64 @@
+stages:
+  - stage: Integration
+    jobs:
+      - job: Integration
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+            displayName: Checkout Repository
+            persistCredentials: true
+
+          # Required for builds
+          - task: UseDotNet@2
+            displayName: Install .NET 6
+            inputs:
+              version: '6.x'
+              
+          # Required for tests
+          - task: UseDotNet@2
+            displayName: Install .NET 3
+            inputs:
+              version: '3.x'
+
+          - task: NuGetAuthenticate@0
+            displayName: Authenticate to Private Feed
+
+          - task: DotNetCoreCLI@2
+            displayName: Build
+            inputs:
+              command: build
+              arguments: -c Release
+
+          - task: DotNetCoreCLI@2
+            displayName: Test
+            inputs:
+              command: test
+              nobuild: true
+              arguments: -c Release
+
+          - task: DotNetCoreCLI@2
+            displayName: Publish
+            inputs:
+              command: publish
+              nobuild: true
+              zipAfterPublish: false
+              modifyOutputPath: false
+              publishWebProjects: false
+              projects: src/DeviceAuthService/DeviceAuthService.csproj
+              arguments: -c Release -o out
+
+          - pwsh: |
+              Compress-Archive -Path out\* -DestinationPath '$(Build.ArtifactStagingDirectory)/$(Build.BuildNumber).zip'
+            displayName: Archive
+
+          - task: CopyFiles@2
+            displayName: Copy Azure Resource Templates
+            inputs:
+              SourceFolder: build/azure
+              TargetFolder: $(Build.ArtifactStagingDirectory)/arm
+              preserveTimestamp: true
+
+          - publish: $(Build.ArtifactStagingDirectory)
+            displayName: Publish Build Artifacts
+            artifact: Drop

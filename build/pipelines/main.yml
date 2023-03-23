@@ -1,4 +1,4 @@
-name: $(GitVersion.NuGetVersionV2)_$(Date:yyyyMMdd)$(Rev:.r)
+name: AzureB2CDeviceFlow_$(Date:yyyyMMdd)$(Rev:.r)
 
 trigger:
   batch: true
@@ -11,7 +11,7 @@ pr: none
 
 variables:
   vmImage: ubuntu-latest
-  serviceCode: 'tok'
+  serviceCode: 'das'
   ${{ if eq(variables['Build.SourceBranchName'], 'main') }}:
     environmentCode: prd
     serviceConnection: 'Azure DevOps Pipeline Service Connection Production'
