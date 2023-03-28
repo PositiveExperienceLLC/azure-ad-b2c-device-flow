@@ -140,7 +140,7 @@ var settings = {
   'Config:RedirectUri': 'https://login.clir.io/api/authorization_callback'
   'Config:SignInPolicy': 'B2C_1A_SIGNUP_SIGNIN'
   'Config:VerificationUri': 'https://login.clir.io'
-  'Config:Redis:Connection': '@Microsoft.KeyVault(SecretUri=${secretRedisConnectionString.properties.secretUri})'
+  'Redis:Connection': '@Microsoft.KeyVault(SecretUri=${secretRedisConnectionString.properties.secretUri})'
   WEBSITE_RUN_FROM_PACKAGE: '1'
 }
 
@@ -198,7 +198,7 @@ module roleAssignmentsKeyVaultSite './roleAssignmentsKeyVault.bicep' = {
   params: {
     keyVaultName: keyVault.name
     objectId: appService.identity.principalId
-  }  
+  }
 }
 
 module roleAssignmentsKeyVaultSwap './roleAssignmentsKeyVault.bicep' = if (environment.slots) {
@@ -207,7 +207,7 @@ module roleAssignmentsKeyVaultSwap './roleAssignmentsKeyVault.bicep' = if (envir
   params: {
     keyVaultName: keyVault.name
     objectId: environment.slots ? slotSwap.identity.principalId : ''
-  }  
+  }
 }
 
 module roleAssignmentsKeyVaultLastGood './roleAssignmentsKeyVault.bicep' = if (environment.slots) {
@@ -216,7 +216,7 @@ module roleAssignmentsKeyVaultLastGood './roleAssignmentsKeyVault.bicep' = if (e
   params: {
     keyVaultName: keyVault.name
     objectId: environment.slots ? slotLastGood.identity.principalId : ''
-  }  
+  }
 }
 
 output appHostName string = appService.name
