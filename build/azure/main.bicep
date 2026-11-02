@@ -28,17 +28,17 @@ var environmentConfiguration = {
     }
   }
   prd: {
-    slots: true
+    slots: false
     appService: {
       properties: {
         siteConfig: {
-          alwaysOn: true
+          alwaysOn: false
         }
       }
     }
     appServicePlan: {
       sku: {
-        name: 'S1'
+        name: 'Y1'
       }
     }
   }
@@ -74,11 +74,22 @@ resource storage 'Microsoft.Storage/storageAccounts@2021-06-01' = {
   }
 }
 
-var redisConnectionString = '${sharedResources.redisCache.name}.redis.cache.windows.net,abortConnect=false,ssl=true,password=${redisCache.listKeys().primaryKey}'
-resource redisCache 'Microsoft.Cache/Redis@2021-06-01' existing = {
-  name: sharedResources.redisCache.name
+// the cache is created here so a rebuild from the pipeline needs no manual steps
+module redisCache './redisCache.bicep' = {
+  name: 'redisCache'
+  scope: resourceGroup(sharedResources.resourceGroup.name)
+  params: {
+    name: sharedResources.redisCache.name
+    location: location
+  }
+}
+
+resource redisDatabase 'Microsoft.Cache/redisEnterprise/databases@2025-07-01' existing = {
+  name: '${sharedResources.redisCache.name}/default'
   scope: resourceGroup(sharedResources.resourceGroup.name)
 }
+
+var redisConnectionString = '${redisCache.outputs.hostName}:10000,abortConnect=false,ssl=true,password=${redisDatabase.listKeys().primaryKey}'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2021-02-01' = {
   name: resourceName

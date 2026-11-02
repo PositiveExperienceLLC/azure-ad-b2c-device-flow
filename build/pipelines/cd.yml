@@ -63,6 +63,3 @@ stages:
               appName: $(WebAppName)
               package: $(Pipeline.Workspace)/Drop/$(Build.BuildNumber).zip
               deploymentMethod: runFromPackage
-              ${{ if eq(parameters.environmentCode, 'prd') }}:
-                deployToSlotOrASE: true
-                slotName: staging
