@@ -153,3 +153,9 @@ window
 ````
 
 The success and error pages are just static HTML pages.
+
+## Production hosting
+
+Device-code sign-in (used only by the Quest build) was taken down in November 2026. The `prd` function app, its plan and the classic `sitescan-cache-prd` Redis cache were deleted, and the `deviceCodeWeb` Static Web App (`login.clir.io`) was moved to Free with no backend. Classic Redis caches can no longer be created. The restore PR adds `build/azure/redisCache.bicep`, which creates an Azure Managed Redis cache instead. The hosting doc linked below has the restore steps.
+
+The [November 2026 hosting changes](https://github.com/PositiveExperienceLLC/Shared/blob/development/docs/hosting-changes-2026-11.md) doc covers why this changed and how it fits with the other services.
