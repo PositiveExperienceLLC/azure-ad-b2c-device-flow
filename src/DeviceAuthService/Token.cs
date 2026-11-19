@@ -2,19 +2,15 @@
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyModel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using StackExchange.Redis;
 using MediaTypeHeaderValue = System.Net.Http.Headers.MediaTypeHeaderValue;
 
 namespace Ltwlf.Azure.B2C
@@ -31,21 +27,21 @@ namespace Ltwlf.Azure.B2C
             [JsonProperty("resource")] public string Resource { get; set; }
         }
 
-        private readonly IConnectionMultiplexer _muxer;
+        private readonly IAuthorizationStateStore _store;
         private readonly HttpClient _client;
         private readonly ConfigOptions _config;
 
-        public Token(IConnectionMultiplexer muxer, HttpClient client, IOptions<ConfigOptions> options)
+        public Token(IAuthorizationStateStore store, IHttpClientFactory httpClientFactory, IOptions<ConfigOptions> options)
         {
-            _muxer = muxer;
-            _client = client;
+            _store = store;
+            _client = httpClientFactory.CreateClient();
             _config = options.Value;
         }
 
-        [FunctionName("token")]
+        [Function("token")]
         public async Task<IActionResult> RunAsync(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "oauth/token")]
-            HttpRequest req, ILogger log)
+            HttpRequest req)
         {
             var deviceCode = req.Query["device_code"].SingleOrDefault();
             var grantType = req.Query["grant_type"].SingleOrDefault();
@@ -74,7 +70,7 @@ namespace Ltwlf.Azure.B2C
 
                 if (b2CTokenResponse.IsSuccessStatusCode)
                 {
-                    var jwt = await b2CTokenResponse.Content.ReadAsAsync<JObject>();
+                    var jwt = JObject.Parse(await b2CTokenResponse.Content.ReadAsStringAsync());
 
                     var accessTokenResponse = new TokenResponse
                     {
@@ -86,23 +82,16 @@ namespace Ltwlf.Azure.B2C
                         Resource = jwt.Value<string>("resource")
                     };
 
-                    return new OkObjectResult(accessTokenResponse);
+                    return Helpers.Json(accessTokenResponse);
                 }
                 else
                 {
-                    return new BadRequestErrorMessageResult(b2CTokenResponse.ReasonPhrase);
+                    return Helpers.Json(new { Message = b2CTokenResponse.ReasonPhrase }, 400);
                 }
             }
             
-            var pattern = $"{deviceCode}:*";
-
-            var key = await Helpers.GetKeyByPattern(_muxer, pattern);
-            if (key == null) return new BadRequestObjectResult("expired_token");
-
-            var value = _muxer.GetDatabase().StringGet(key);
-            var authStateJson = value.ToString();
-
-            var authState = JsonConvert.DeserializeObject<AuthorizationState>(authStateJson);
+            var authState = _store.GetByDeviceCode(deviceCode);
+            if (authState == null) return new BadRequestObjectResult("expired_token");
 
             if (authState.AccessToken == null) return new BadRequestObjectResult("authorization_pending");
 
@@ -115,7 +104,7 @@ namespace Ltwlf.Azure.B2C
                 Scope =  authState.Scope
             };
 
-            return new OkObjectResult(tokenResponse);
+            return Helpers.Json(tokenResponse);
         }
     }
 }

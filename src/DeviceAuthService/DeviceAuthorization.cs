@@ -2,13 +2,11 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using StackExchange.Redis;
 using  System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -27,23 +25,24 @@ namespace Ltwlf.Azure.B2C
             [JsonProperty("expires_in")] public int ExpiresIn { get; set; }
         }
 
-        private readonly IConnectionMultiplexer _muxer;
+        private readonly IAuthorizationStateStore _store;
+        private readonly ILogger<DeviceAuthorization> _log;
 
         private readonly ConfigOptions _config;
 
-        public DeviceAuthorization(IConnectionMultiplexer muxer, IOptions<ConfigOptions> options)
+        public DeviceAuthorization(IAuthorizationStateStore store, IOptions<ConfigOptions> options, ILogger<DeviceAuthorization> log)
         {
-            _muxer = muxer;
+            _store = store;
+            _log = log;
             _config = options.Value;
         }
 
-        [FunctionName("device_authorization")]
-        public IActionResult Run(
+        [Function("device_authorization")]
+        public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "oauth/device_authorization")]
-            HttpRequest req,
-            ILogger log)
+            HttpRequest req)
         {
-            log.LogInformation("DeviceAuthorization function is processing a request.");
+            _log.LogInformation("DeviceAuthorization function is processing a request.");
 
             if (req.ContentLength == null || !req.ContentType.Equals("application/x-www-form-urlencoded",
                 StringComparison.InvariantCultureIgnoreCase))
@@ -64,7 +63,7 @@ namespace Ltwlf.Azure.B2C
                 UserCode = GenerateRandomString(length:_config.UserCodeLength),
                 ExpiresIn = 360,
                 VerificationUri = _config.VerificationUri,
-                Scope = req.Form?["scope"],
+                Scope = (await req.ReadFormAsync())["scope"],
                 CodeVerifier = codeVerifier
             };
 
@@ -78,15 +77,14 @@ namespace Ltwlf.Azure.B2C
 
             try
             {
-                _muxer.GetDatabase().StringSet($"{authState.DeviceCode}:{authState.UserCode}",
-                    JsonConvert.SerializeObject(authState), new TimeSpan(0, 0, authState.ExpiresIn));
+                _store.Set(authState, TimeSpan.FromSeconds(authState.ExpiresIn));
             }
             catch(Exception ex)
             {
-                log.LogError($"Error creating device code request {ex.Message}");
+                _log.LogError($"Error creating device code request {ex.Message}");
             }
 
-            return new OkObjectResult(response);
+            return Helpers.Json(response);
         }
 
         public static string CreateSecureRandomString(int count = 64)
