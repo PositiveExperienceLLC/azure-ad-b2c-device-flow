@@ -41,9 +41,15 @@ stages:
               projects: src/DeviceAuthService/DeviceAuthService.csproj
               arguments: -c Release -o out
 
-          - pwsh: |
-              Compress-Archive -Path out\* -DestinationPath '$(Build.ArtifactStagingDirectory)/$(Build.BuildNumber).zip'
+          # ArchiveFiles keeps dot-folders; Compress-Archive on Linux skips them, which drops the
+          # isolated worker's .azurefunctions extension folder and leaves the host with no functions
+          - task: ArchiveFiles@2
             displayName: Archive
+            inputs:
+              rootFolderOrFile: out
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildNumber).zip
 
           - task: CopyFiles@2
             displayName: Copy Azure Resource Templates
