@@ -6,38 +6,38 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using StackExchange.Redis;
 
 namespace Ltwlf.Azure.B2C
 {
     public class AuthorizationCallback
     {
-        private readonly IConnectionMultiplexer _muxer;
+        private readonly IAuthorizationStateStore _store;
+        private readonly ILogger<AuthorizationCallback> _log;
         private readonly HttpClient _client;
         private readonly PageFactory _pageFactory;
         private readonly ConfigOptions _config;
 
-        public AuthorizationCallback(IConnectionMultiplexer muxer, HttpClient client, IOptions<ConfigOptions> options, PageFactory pageFactory)
+        public AuthorizationCallback(IAuthorizationStateStore store, IHttpClientFactory httpClientFactory, IOptions<ConfigOptions> options, PageFactory pageFactory, ILogger<AuthorizationCallback> log)
         {
-            _muxer = muxer;
-            _client = client;
+            _store = store;
+            _log = log;
+            _client = httpClientFactory.CreateClient();
             _pageFactory = pageFactory;
             _config = options.Value;
         }
 
-        [FunctionName("authorization_callback")]
+        [Function("authorization_callback")]
         public async Task<IActionResult> RunAsync(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "authorization_callback")]
-            HttpRequest req, ILogger log, ExecutionContext context)
+            HttpRequest req)
         {
-            log.LogInformation("authorization_callback function processed a request.");
+            _log.LogInformation("authorization_callback function processed a request.");
 
             if(req.Query.ContainsKey("error"))
             {
@@ -48,10 +48,10 @@ namespace Ltwlf.Azure.B2C
             String code = HttpUtility.ParseQueryString(requestBody).Get("code");
             String userCode = HttpUtility.ParseQueryString(requestBody).Get("state");
                         
-            var authState = await Helpers.GetValueByKeyPattern<AuthorizationState>(_muxer, $"*:{userCode}");
+            var authState = _store.GetByUserCode(userCode);
             if (authState == null)
             {
-                log.LogWarning("Device authentication request expired");
+                _log.LogWarning("Device authentication request expired");
                 return _pageFactory.GetPageResult(PageFactory.PageType.Error);
             }
 
@@ -68,15 +68,14 @@ namespace Ltwlf.Azure.B2C
                 return new ContentResult() {Content = errorContent};
             }
 
-            var jwt = await tokenResponse.Content.ReadAsAsync<JObject>();
+            var jwt = JObject.Parse(await tokenResponse.Content.ReadAsStringAsync());
 
             authState.AccessToken = jwt.Value<string>("access_token");
             authState.RefreshToken = jwt.Value<string>("refresh_token");
             authState.ExpiresIn = jwt.Value<int>("expires_in");
             authState.TokenType = jwt.Value<string>("token_type");
 
-            _muxer.GetDatabase().StringSet($"{authState.DeviceCode}:{authState.UserCode}",
-                JsonConvert.SerializeObject(authState), TimeSpan.FromSeconds(_config.ExpiresIn));
+            _store.Set(authState, TimeSpan.FromSeconds(_config.ExpiresIn));
 
             return new RedirectResult("../signinSuccess.html");
         }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Net;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -21,7 +20,7 @@ namespace Ltwlf.Azure.B2C
         private readonly string _successPagePath;
         private readonly string _errorPagePath;
 
-        public PageFactory(IOptions<ConfigOptions> options, IHostingEnvironment  host)
+        public PageFactory(IOptions<ConfigOptions> options)
         {
             var local_root = Environment.GetEnvironmentVariable("AzureWebJobsScriptRoot");
             var azure_root = $"{Environment.GetEnvironmentVariable("HOME")}/site/wwwroot";

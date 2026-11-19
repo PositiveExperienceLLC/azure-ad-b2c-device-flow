@@ -8,48 +8,49 @@ using System.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using StackExchange.Redis;
 
 namespace Ltwlf.Azure.B2C
 {
     public class SignInRedirect
     {
-        private readonly IConnectionMultiplexer _muxer;
+        private readonly IAuthorizationStateStore _store;
+        private readonly ILogger<SignInRedirect> _log;
         private readonly PageFactory _pageFactory;
         private readonly ConfigOptions _config;
 
-        public SignInRedirect(IConnectionMultiplexer muxer, IOptions<ConfigOptions> options, PageFactory pageFactory)
+        public SignInRedirect(IAuthorizationStateStore store, IOptions<ConfigOptions> options, PageFactory pageFactory, ILogger<SignInRedirect> log)
         {
-            _muxer = muxer;
+            _store = store;
+            _log = log;
             _pageFactory = pageFactory;
             _config = options.Value;
         }
 
-        [FunctionName("user_code_get")]
+        [Function("user_code_get")]
         public IActionResult Get(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get")]
-            HttpRequest req, ILogger log, ExecutionContext context)
+            HttpRequest req)
         {
             return _pageFactory.GetPageResult(PageFactory.PageType.UserCode);
         }
 
-        [FunctionName("user_code_post")]
+        [Function("user_code_post")]
         public async Task<IActionResult> Post(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
-            HttpRequest req, ILogger log, ExecutionContext context)
+            HttpRequest req)
         {
             var useAjax = req.Headers.TryGetValue("x-use-ajax", out var useAjaxHeader) &&
                           String.Equals(useAjaxHeader, "true", StringComparison.OrdinalIgnoreCase);
 
             try
             {
-                var userCode = req.Form["user_code"];
+                var userCode = (await req.ReadFormAsync())["user_code"].ToString();
 
-                var authState = await Helpers.GetValueByKeyPattern<AuthorizationState>(_muxer, $"*:{userCode}");
+                var authState = _store.GetByUserCode(userCode)
+                    ?? throw new InvalidOperationException("Unknown or expired user code");
 
                 var tenant = _config.Tenant;
                 var signInFlow = _config.SignInPolicy;
@@ -71,24 +72,14 @@ namespace Ltwlf.Azure.B2C
             }
             catch (Exception e)
             {
-                log.LogInformation(e.Message);
+                _log.LogInformation(e.Message);
 
                 if (useAjax)
                 {
                     return new BadRequestResult();
                 }
 
-                var filePath = _config.ErrorPage ?? Path.Combine(context.FunctionDirectory, "../www/error.html");
-                if (filePath.StartsWith("http"))
-                {
-                    var client = new WebClient();
-                    {
-                        return new FileContentResult(client.DownloadData(new Uri(filePath)),
-                            "text/html; charset=UTF-8");
-                    }
-                }
-
-                return new FileStreamResult(File.OpenRead(filePath), "text/html; charset=UTF-8");
+                return _pageFactory.GetPageResult(PageFactory.PageType.Error);
             }
         }
     }

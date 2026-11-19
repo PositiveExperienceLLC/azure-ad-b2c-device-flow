@@ -9,17 +9,10 @@ stages:
             displayName: Checkout Repository
             persistCredentials: true
 
-          # Required for builds
           - task: UseDotNet@2
-            displayName: Install .NET 6
+            displayName: Install .NET 8
             inputs:
-              version: '6.x'
-              
-          # Required for tests
-          - task: UseDotNet@2
-            displayName: Install .NET 3
-            inputs:
-              version: '3.x'
+              version: '8.x'
 
           - task: NuGetAuthenticate@0
             displayName: Authenticate to Private Feed

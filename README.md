@@ -9,14 +9,13 @@ _Work in progress_...
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "Config:AppId": "",
     "Config:AppSecret": "",
     "Config:Tenant": "myb2c",
-    "Config:RedirectUri": "http://localhost:7071/authorization_callback",
+    "Config:RedirectUri": "http://localhost:7071/api/authorization_callback",
     "Config:SignInPolicy": "B2C_1A_signup_signin",
     "Config:VerificationUri": "http://localhost:7071",
-    "Config:Redis": "localhost",
     // optional: configure custom html pages (e.g. load from a blob storage)
     "Config:UserCodePage": "http://localhost:8080/usercode.html",
     "Config:SuccessPage": "http://localhost:8080/success.html",
@@ -156,6 +155,15 @@ The success and error pages are just static HTML pages.
 
 ## Production hosting
 
-Device-code sign-in (used only by the Quest build) was taken down in November 2026. The `prd` function app, its plan and the classic `sitescan-cache-prd` Redis cache were deleted, and the `deviceCodeWeb` Static Web App (`login.clir.io`) was moved to Free with no backend. Classic Redis caches can no longer be created. The restore PR adds `build/azure/redisCache.bicep`, which creates an Azure Managed Redis cache instead. The hosting doc linked below has the restore steps.
+Device-code sign-in is used only by the Quest build. The `prd` function app (`das-prd-scirmdebbac4u`) runs on the WorkspaceService App Service plan (`wss-prd`: B1, one instance, Always On), alongside wss, tok, col, viw and web. It adds no hosting cost of its own.
+
+**Pending sign-ins are held in memory** (`MemoryAuthorizationStateStore`), not in Redis. A device code lives for 6 minutes. The device-code and user-code lookups happen in the same process, which is safe only because the plan runs a single instance that never idles out. Things to know:
+
+- A restart or deploy of das loses any sign-ins in progress. The user requests a new code on the Quest.
+- Don't scale the `wss-prd` plan out to more than one instance, or move das to a Consumption or multi-instance plan, without first switching `IAuthorizationStateStore` to shared storage (for example Azure Table Storage).
+
+**`login.clir.io`** is the `deviceCodeWeb` Static Web App. It serves the code-entry page, which posts to `/api/user_code_post`. The app must be on the **Standard** plan with das linked as its backend ("APIs" in the portal), so that `/api/*` reaches das. The Free plan can't link a backend.
+
+Until November 2026 das ran on its own S1 plan, with a classic Basic Redis cache (`sitescan-cache-prd`) for pending sign-ins. Both were deleted, and classic Redis caches can no longer be created. das also moved from the in-process .NET 6 model, whose support ended on November 10, 2026, to the .NET 8 isolated worker.
 
 The [November 2026 hosting changes](https://github.com/PositiveExperienceLLC/Shared/blob/development/docs/hosting-changes-2026-11.md) doc covers why this changed and how it fits with the other services.
